@@ -221,7 +221,8 @@ public class B2 : IStreamingBackend, ILockingBackend, IRenameEnabledBackend
         }
 
         _downloadUrl = null;
-        if (options.TryGetValue(B2_DOWNLOAD_URL_OPTION, out var option)) _downloadUrl = option;
+        if (options.TryGetValue(B2_DOWNLOAD_URL_OPTION, out var option))
+            _downloadUrl = ParseCustomDownloadUrl(option);
 
         // Parse lock mode option, default to Governance
         _lockMode = B2LockMode.Governance; // Default to governance
@@ -330,6 +331,48 @@ public class B2 : IStreamingBackend, ILockingBackend, IRenameEnabledBackend
         throw new FileMissingException();
     }
 
+    /// <summary>
+    /// Normalizes and validates a user-supplied download URL override.
+    /// Returns null when no override is supplied.
+    /// </summary>
+    /// <param name="downloadUrl">User-provided b2-download-url value</param>
+    /// <returns>Normalized URL without trailing slash, or null if unset</returns>
+    /// <exception cref="UserInformationException">Thrown when the URL is invalid</exception>
+    private static string? ParseCustomDownloadUrl(string? downloadUrl)
+    {
+        if (string.IsNullOrWhiteSpace(downloadUrl))
+            return null;
+
+        var normalized = downloadUrl.Trim().TrimEnd('/');
+        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            throw new UserInformationException(Strings.B2.InvalidDownloadUrlError(B2_DOWNLOAD_URL_OPTION, downloadUrl), "B2InvalidDownloadUrl");
+
+        return normalized;
+    }
+
+    /// <summary>
+    /// Resolves the download URL used for file download operations.
+    /// A user-provided b2-download-url overrides the API-provided URL.
+    /// </summary>
+    /// <param name="defaultDownloadUrl">Download URL from B2 authorization config</param>
+    /// <returns>The effective download base URL</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no valid URL can be resolved</exception>
+    private string ResolveDownloadUrl(string? defaultDownloadUrl)
+    {
+        var effectiveDownloadUrl = _downloadUrl;
+        if (string.IsNullOrWhiteSpace(effectiveDownloadUrl))
+        {
+            var normalizedDefaultUrl = defaultDownloadUrl?.Trim().TrimEnd('/');
+            if (string.IsNullOrWhiteSpace(normalizedDefaultUrl))
+                throw new InvalidOperationException("No valid Backblaze B2 download URL is available.");
+
+            effectiveDownloadUrl = normalizedDefaultUrl;
+        }
+
+        return effectiveDownloadUrl;
+    }
+
     /// <inheritdoc/>
     public IList<ICommandLineArgument> SupportedCommands =>
         new List<ICommandLineArgument>([
@@ -417,12 +460,13 @@ public class B2 : IStreamingBackend, ILockingBackend, IRenameEnabledBackend
             await RebuildFileCache(cancellationToken).ConfigureAwait(false);
 
         var config = await _b2AuthHelper.GetConfigAsync(cancellationToken).ConfigureAwait(false);
+        var downloadUrl = ResolveDownloadUrl(config.DownloadUrl);
 
         using var request = _filecache != null && _filecache.ContainsKey(remotename)
             ? await _b2AuthHelper.CreateRequestAsync(
-                $"{config.DownloadUrl}/b2api/v1/b2_download_file_by_id?fileId={Utility.Uri.UrlEncode(await GetFileId(remotename, cancellationToken))}", HttpMethod.Get, cancellationToken).ConfigureAwait(false)
+                $"{downloadUrl}/b2api/v1/b2_download_file_by_id?fileId={Utility.Uri.UrlEncode(await GetFileId(remotename, cancellationToken))}", HttpMethod.Get, cancellationToken).ConfigureAwait(false)
             : await _b2AuthHelper.CreateRequestAsync(
-                $"{config.DownloadUrl}/{_urlencodedPrefix}{Utility.Uri.UrlPathEncode(remotename)}", HttpMethod.Get, cancellationToken).ConfigureAwait(false);
+                $"{downloadUrl}/{_urlencodedPrefix}{Utility.Uri.UrlPathEncode(remotename)}", HttpMethod.Get, cancellationToken).ConfigureAwait(false);
 
         HttpResponseMessage? response = null;
         try
@@ -699,10 +743,11 @@ public class B2 : IStreamingBackend, ILockingBackend, IRenameEnabledBackend
     public async Task<string[]> GetDNSNamesAsync(CancellationToken cancelToken)
     {
         var config = await _b2AuthHelper.GetConfigAsync(cancelToken);
+        var downloadUrl = ResolveDownloadUrl(config.DownloadUrl);
         return new string?[] {
             B2AuthHelper.AUTH_URL,
             config.APIUrl,
-            config.DownloadUrl
+            downloadUrl
         }.WhereNotNullOrWhiteSpace()
         .Select(x => new System.Uri(x).Host)
         .Distinct()
