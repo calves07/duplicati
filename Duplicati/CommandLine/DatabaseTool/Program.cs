@@ -1,4 +1,4 @@
-// Copyright (C) 2025, The Duplicati Team
+// Copyright (C) 2026, The Duplicati Team
 // https://duplicati.com, hello@duplicati.com
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a 
@@ -46,6 +46,8 @@ public static class Program
                 Commands.Upgrade.Create(),
                 Commands.List.Create(),
                 Commands.Execute.Create(),
+                Commands.Verify.Create(),
+                Commands.Cleanup.Create(),
             };
 
         return new CommandLineBuilder(rootCmd)

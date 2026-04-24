@@ -1,4 +1,4 @@
-// Copyright (C) 2025, The Duplicati Team
+// Copyright (C) 2026, The Duplicati Team
 // https://duplicati.com, hello@duplicati.com
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a 
@@ -118,6 +118,7 @@ public static partial class Command
         { "Duplicati.CommandLine.SyncTool", "duplicati-sync-tool" },
         { "Duplicati.CommandLine.SourceTool", "duplicati-source-tool" },
         { "Duplicati.CommandLine.DatabaseTool", "duplicati-database-tool" },
+        { "Duplicati.CommandLine.ConfigureTool", "duplicati-configure" },
         { "Duplicati.Service", "duplicati-service" },
         { "Duplicati.Agent", "duplicati-agent" },
         { "Duplicati.CommandLine", "duplicati-cli" },

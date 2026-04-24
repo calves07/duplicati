@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Duplicati.Proprietary.DiskImage.General;
 using Duplicati.Proprietary.DiskImage.Partition;
 
 namespace Duplicati.Proprietary.DiskImage.Filesystem;
@@ -137,6 +138,12 @@ public interface IFile
     /// Gets a value indicating whether this is a directory.
     /// </summary>
     bool IsDirectory { get; }
+
+    /// <summary>
+    /// Gets the last modification timestamp of the file.
+    /// Returns null if the timestamp is not available.
+    /// </summary>
+    DateTime? LastModified { get; }
 }
 
 /// <summary>

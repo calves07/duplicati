@@ -1,4 +1,4 @@
-// Copyright (C) 2025, The Duplicati Team
+// Copyright (C) 2026, The Duplicati Team
 // https://duplicati.com, hello@duplicati.com
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -166,12 +166,13 @@ namespace Duplicati.UnitTest
 
         [Test]
         [Category("RestoreHandler")]
-        public async System.Threading.Tasks.Task RestoreVolumeCache([Values("0b", "1mb", "5mb", "1gb")] string cache_size, [Values("0", "1", null)] string? channel_size)
+        public async System.Threading.Tasks.Task RestoreVolumeCache([Values("0b", "1mb", "5mb", "1gb", null)] string? cache_size, [Values("0", "1", null)] string? channel_size)
         {
             var opts = TestOptions;
             opts["dblock-size"] = "1mb";
             opts["blocksize"] = "1kb";
-            opts["restore-volume-cache-hint"] = cache_size;
+            if (cache_size != null)
+                opts["restore-volume-cache-hint"] = cache_size;
             if (channel_size != null)
                 opts["restore-channel-buffer-size"] = channel_size;
             opts["restore-legacy"] = "false";
@@ -219,6 +220,38 @@ namespace Duplicati.UnitTest
 
         [Test]
         [Category("RestoreHandler")]
+        public void RestoreInternalProfilingLogsCacheUsage()
+        {
+            var sourceFilePath = Path.Combine(this.DATAFOLDER, "profiled-restore.bin");
+            File.WriteAllBytes(sourceFilePath, new byte[256 * 1024]);
+
+            var backupOptions = new Dictionary<string, string>(this.TestOptions)
+            {
+                ["dblock-size"] = "100kb",
+                ["blocksize"] = "10kb"
+            };
+
+            using (var c = new Controller("file://" + this.TARGETFOLDER, backupOptions, null))
+                TestUtils.AssertResults(c.Backup(new[] { this.DATAFOLDER }));
+
+            var restoreOptions = new Dictionary<string, string>(this.TestOptions)
+            {
+                ["restore-path"] = this.RESTOREFOLDER,
+                ["restore-legacy"] = "false",
+                ["restore-with-local-blocks"] = "false",
+                ["restore-volume-cache-hint"] = "1mb",
+                ["internal-profiling"] = "true"
+            };
+
+            using (var c = new Controller("file://" + this.TARGETFOLDER, restoreOptions, null))
+                TestUtils.AssertResults(c.Restore(new[] { "*" }));
+
+            var logContents = File.ReadAllText(this.LOGFILE);
+            Assert.That(logContents, Does.Contain("Max used cache size:"));
+        }
+
+        [Test]
+        [Category("RestoreHandler")]
         public void RestoreWithoutLocalData([Values("true", "false")] string noLocalDb, [Values("true", "false")] string patchWithLocalBlocks)
         {
             var file1Path = Path.Combine(this.DATAFOLDER, "file1");
@@ -245,6 +278,74 @@ namespace Duplicati.UnitTest
                 TestUtils.AssertResults(c.Restore(new[] { "*" }));
 
             TestUtils.AssertDirectoryTreesAreEquivalent(this.DATAFOLDER, this.RESTOREFOLDER, true, "Restoring without local data");
+        }
+
+        [Test]
+        [Category("RestoreHandler")]
+        public void RestoreThreeVersionsWithoutLocalDb([Values(0, 1, 2)] int version)
+        {
+            // Create three versions with different file contents
+            var file1Path = Path.Combine(this.DATAFOLDER, "file1.txt");
+            var file2Path = Path.Combine(this.DATAFOLDER, "file2.txt");
+
+            // Version 0 (oldest): Create initial files
+            File.WriteAllText(file1Path, "version 0 content");
+            File.WriteAllText(file2Path, "version 0 file2");
+            using (Controller c = new Controller("file://" + this.TARGETFOLDER, new Dictionary<string, string>(this.TestOptions), null))
+                TestUtils.AssertResults(c.Backup(new[] { this.DATAFOLDER }));
+
+            // Version 1: Modify file1, keep file2
+            File.WriteAllText(file1Path, "version 1 content");
+            using (Controller c = new Controller("file://" + this.TARGETFOLDER, new Dictionary<string, string>(this.TestOptions), null))
+                TestUtils.AssertResults(c.Backup(new[] { this.DATAFOLDER }));
+
+            // Version 2 (newest): Modify both files
+            File.WriteAllText(file1Path, "version 2 content");
+            File.WriteAllText(file2Path, "version 2 file2");
+            using (Controller c = new Controller("file://" + this.TARGETFOLDER, new Dictionary<string, string>(this.TestOptions), null))
+                TestUtils.AssertResults(c.Backup(new[] { this.DATAFOLDER }));
+
+            // Prepare expected content based on version being restored
+            // Note: In Duplicati, version 0 is the MOST RECENT backup
+            string expectedFile1Content;
+            string expectedFile2Content;
+            switch (version)
+            {
+                case 0: // Most recent (version 2 in our creation order)
+                    expectedFile1Content = "version 2 content";
+                    expectedFile2Content = "version 2 file2";
+                    break;
+                case 1: // Second most recent (version 1 in our creation order)
+                    expectedFile1Content = "version 1 content";
+                    expectedFile2Content = "version 0 file2";
+                    break;
+                case 2: // Oldest (version 0 in our creation order)
+                    expectedFile1Content = "version 0 content";
+                    expectedFile2Content = "version 0 file2";
+                    break;
+                default:
+                    throw new ArgumentException("Invalid version");
+            }
+
+            // Restore with --version and --no-local-db
+            var restoreOptions = new Dictionary<string, string>(this.TestOptions)
+            {
+                ["restore-path"] = this.RESTOREFOLDER,
+                ["version"] = version.ToString(),
+                ["no-local-db"] = "true"
+            };
+
+            using (var c = new Controller("file://" + this.TARGETFOLDER, restoreOptions, null))
+                TestUtils.AssertResults(c.Restore(new[] { "*" }));
+
+            // Verify restored files match the expected version
+            var restoredFile1Path = Path.Combine(this.RESTOREFOLDER, "file1.txt");
+            var restoredFile2Path = Path.Combine(this.RESTOREFOLDER, "file2.txt");
+
+            Assert.IsTrue(File.Exists(restoredFile1Path), "Restored file1 should exist");
+            Assert.IsTrue(File.Exists(restoredFile2Path), "Restored file2 should exist");
+            Assert.AreEqual(expectedFile1Content, File.ReadAllText(restoredFile1Path), $"File1 content mismatch for version {version}");
+            Assert.AreEqual(expectedFile2Content, File.ReadAllText(restoredFile2Path), $"File2 content mismatch for version {version}");
         }
 
         [Test]
@@ -280,6 +381,62 @@ namespace Duplicati.UnitTest
             var res_restore = c.Restore(["*"]);
             TestUtils.AssertResults(res_restore);
             Assert.AreEqual(original_contents, File.ReadAllBytes(file1Path));
+        }
+
+        [Test]
+        [Category("RestoreHandler")]
+        public async System.Threading.Tasks.Task RestoreVolumeCacheDiskPressure()
+        {
+            var opts = TestOptions;
+            opts["dblock-size"] = "1mb";
+            opts["blocksize"] = "1kb";
+            // No restore-volume-cache-hint → unlimited mode (-1 sentinel).
+            // Set restore-volume-cache-min-free to an absurdly large value so
+            // every volume arrival triggers disk-pressure eviction.
+            opts["restore-volume-cache-min-free"] = "999tb";
+            opts["restore-legacy"] = "false";
+            opts["restore-path"] = RESTOREFOLDER;
+
+            // Write enough data to create at least 10 dblock volumes (dblock-size=1mb),
+            // so that the eviction loop is entered multiple times and the CachePressure
+            // warning threshold (5 evictions) is reliably crossed.
+            Random rng = new();
+            for (int i = 0; i < 20; i++)
+            {
+                var data = new byte[512 * 1024]; // 512 KB each → ~10 MB total → ~10 dblock volumes
+                rng.NextBytes(data);
+                File.WriteAllBytes(Path.Combine(this.DATAFOLDER, $"file{i}"), data);
+            }
+
+            using var c = new Controller("file://" + this.TARGETFOLDER, opts, null);
+            TestUtils.AssertResults(c.Backup([this.DATAFOLDER]));
+
+            var timeout_task = System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(120));
+            RestoreResults? result = null;
+
+            var restore_task = System.Threading.Tasks.Task.Run(() =>
+            {
+                result = (RestoreResults)c.Restore(["*"]);
+            });
+
+            var t = await System.Threading.Tasks.Task.WhenAny(timeout_task, restore_task);
+            if (t == timeout_task)
+            {
+                c.Abort();
+                await restore_task;
+                Assert.Fail("Restore timed out");
+            }
+            else
+            {
+                t.GetAwaiter().GetResult();
+            }
+
+            Assert.IsNotNull(result);
+            Assert.That(result!.CachePressureEvictions, Is.GreaterThan(0), "Expected disk-pressure evictions with 999tb min-free");
+            Assert.That(result.TotalVolumesAccessed, Is.GreaterThan(0), "Expected at least one volume to be accessed");
+            Assert.That(result.Warnings.Count(), Is.GreaterThanOrEqualTo(1), "Expected at least one CachePressure warning");
+
+            TestUtils.AssertDirectoryTreesAreEquivalent(this.DATAFOLDER, this.RESTOREFOLDER, true, "Restoring with disk pressure eviction");
         }
     }
 }

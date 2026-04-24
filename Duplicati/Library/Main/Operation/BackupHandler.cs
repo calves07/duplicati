@@ -1,4 +1,4 @@
-// Copyright (C) 2025, The Duplicati Team
+// Copyright (C) 2026, The Duplicati Team
 // https://duplicati.com, hello@duplicati.com
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -844,6 +844,17 @@ namespace Duplicati.Library.Main.Operation
                         {
                             //If the scanner is still running for some reason, make sure we kill it now
                             counterToken.Cancel();
+                        }
+
+                        try
+                        {
+                            // Await the scanner as it may still be running
+                            if (parallelScanner != null)
+                                await parallelScanner.ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // This is expected if the scanner is still running, so we can ignore this
                         }
                     }
 

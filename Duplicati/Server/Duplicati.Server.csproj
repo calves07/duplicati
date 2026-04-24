@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>Duplicati.Server.Implementation</AssemblyName>
-    <Copyright>Copyright © 2025 Team Duplicati, MIT license</Copyright>
+    <Copyright>Copyright © 2026 Team Duplicati, MIT license</Copyright>
     <NoWarn>$(NoWarn);NU1510</NoWarn>
   </PropertyGroup>
 
@@ -40,6 +40,7 @@
     <ProjectReference Include="..\Library\UsageReporter\Duplicati.Library.UsageReporter.csproj" />
     <ProjectReference Include="..\Tools\Duplicati.Tools.csproj" />
     <ProjectReference Include="..\Library\Crashlog\Duplicati.Library.Crashlog.csproj" />
+    <ProjectReference Include="..\Library\Certificates\Duplicati.Library.Certificates.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-// Copyright (C) 2025, The Duplicati Team
+// Copyright (C) 2026, The Duplicati Team
 // https://duplicati.com, hello@duplicati.com
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -127,7 +127,7 @@ namespace Duplicati.Library.Main.Operation
                 if (f != null && File.Exists(f))
                     File.Delete(f);
 
-                var filelistfilter = RestoreHandler.FilterNumberedFilelist(m_options.Time, m_options.Version);
+                var filelistfilter = RestoreHandler.GetNumberedFilelistFilterDelegate(m_options.Time, m_options.Version);
 
                 await new RecreateDatabaseHandler(m_options, (RecreateDatabaseResults)m_result.RecreateDatabaseResults)
                     .RunAsync(m_options.Dryrun ? (string)f : m_options.Dbpath, backendManager, filter, filelistfilter, null)

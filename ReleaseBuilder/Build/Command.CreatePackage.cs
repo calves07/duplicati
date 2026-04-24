@@ -1,4 +1,4 @@
-// Copyright (C) 2025, The Duplicati Team
+// Copyright (C) 2026, The Duplicati Team
 // https://duplicati.com, hello@duplicati.com
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -1588,9 +1588,12 @@ public static partial class Command
             // Copy in the run-as-user.sh script
             File.Copy(Path.Combine(resourcesDir, "run-as-user.sh"), Path.Combine(tmpbuild, "run-as-user.sh"), true);
 
-            var tags = new List<string> { rtcfg.ReleaseInfo.Channel.ToString(), rtcfg.ReleaseInfo.Version.ToString(), $"{rtcfg.ReleaseInfo.Version}-{rtcfg.ReleaseInfo.Channel}" };
+            var tags = new List<string> { rtcfg.ReleaseInfo.Channel.ToString(), $"{rtcfg.ReleaseInfo.Version}-{rtcfg.ReleaseInfo.Channel}" };
             if (rtcfg.ReleaseInfo.Channel == ReleaseChannel.Stable)
+            {
+                tags.Add(rtcfg.ReleaseInfo.Version.ToString());
                 tags.Add("latest");
+            }
 
             if (!dockerArchs.Any())
                 continue;

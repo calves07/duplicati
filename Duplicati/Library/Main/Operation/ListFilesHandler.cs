@@ -1,4 +1,4 @@
-// Copyright (C) 2025, The Duplicati Team
+// Copyright (C) 2026, The Duplicati Team
 // https://duplicati.com, hello@duplicati.com
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -238,8 +238,7 @@ namespace Duplicati.Library.Main.Operation
                               where p != null && p.FileType == RemoteVolumeType.Files
                               orderby p.Time descending
                               select p).ToArray();
-            var filelistFilter = RestoreHandler.FilterNumberedFilelist(options.Time, options.Version);
-            return filelistFilter(parsedlist).ToList();
+            return RestoreHandler.FilterNumberedFilelist(parsedlist, options.Time, options.Version).ToList();
         }
 
         private class RemoteVolumeMapper(IParsedVolume Volume) : IRemoteVolume

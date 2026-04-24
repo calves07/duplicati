@@ -1,4 +1,4 @@
-// Copyright (C) 2025, The Duplicati Team
+// Copyright (C) 2026, The Duplicati Team
 // https://duplicati.com, hello@duplicati.com
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -377,9 +377,8 @@ namespace Duplicati.Library.Main.Operation.Restore
                                         sw_resp?.Start();
                                         using var datablock = await (await block_response.ReadAsync().ConfigureAwait(false)).ConfigureAwait(false);
                                         if (datablock.Data == null)
-                                        {
-                                            throw new Exception($"Received null data block from request {missing_blocks[i].BlockID} for file {file.TargetPath}");
-                                        }
+                                            throw new Exception($"Received null data block from request {missing_blocks[j].BlockID} for file {file.TargetPath}");
+
                                         sw_resp?.Stop();
 
                                         sw_req?.Start();

@@ -1,4 +1,4 @@
-// Copyright (C) 2025, The Duplicati Team
+// Copyright (C) 2026, The Duplicati Team
 // https://duplicati.com, hello@duplicati.com
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -24,6 +24,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Duplicati.Proprietary.DiskImage.Disk;
+using Duplicati.Proprietary.DiskImage.General;
 
 namespace Duplicati.Proprietary.DiskImage.Partition;
 

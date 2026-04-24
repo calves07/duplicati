@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Duplicati.Library.Interface;
 using Duplicati.Proprietary.DiskImage.Disk;
+using Duplicati.Proprietary.DiskImage.General;
 using Duplicati.Proprietary.DiskImage.Partition;
 using Duplicati.Proprietary.DiskImage.SourceItems;
 
@@ -49,12 +50,18 @@ public sealed class SourceProvider : ISourceProviderModule, IDisposable
     private readonly ConcurrentDictionary<string, ISourceProviderEntry> _entryCache = new();
 
     /// <summary>
+    /// Indicates whether to treat filesystems as unknown (force raw block-based backup).
+    /// </summary>
+    private readonly bool _treatFilesystemAsUnknown;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="SourceProvider"/> class.
     /// Default constructor for metadata loading.
     /// </summary>
     public SourceProvider()
     {
         _devicePath = null!;
+        _treatFilesystemAsUnknown = false;
     }
 
     /// <summary>
@@ -70,6 +77,8 @@ public sealed class SourceProvider : ISourceProviderModule, IDisposable
 
         var uri = new Library.Utility.Uri(url);
         _devicePath = uri.HostAndPath;
+
+        _treatFilesystemAsUnknown = Library.Utility.Utility.ParseBoolOption(options, OptionsHelper.DISK_IMAGE_FILESYSTEM_UNKNOWN_OPTION);
     }
 
     /// <inheritdoc />
@@ -87,6 +96,11 @@ public sealed class SourceProvider : ISourceProviderModule, IDisposable
     /// <inheritdoc />
     public IList<ICommandLineArgument> SupportedCommands => OptionsHelper.SupportedCommands;
 
+    /// <summary>
+    /// Gets a value indicating whether to treat filesystems as unknown (force raw block-based backup).
+    /// </summary>
+    internal bool TreatFilesystemAsUnknown => _treatFilesystemAsUnknown;
+
     /// <inheritdoc />
     public async Task Initialize(CancellationToken cancellationToken)
     {
@@ -99,9 +113,21 @@ public sealed class SourceProvider : ISourceProviderModule, IDisposable
             if (!await _disk.InitializeAsync(cancellationToken))
                 throw new UserInformationException($"Failed to initialize disk: {_devicePath}", "DiskInitializeFailed");
         }
+        else if (OperatingSystem.IsMacOS())
+        {
+            _disk = new Mac(_devicePath);
+            if (!await _disk.InitializeAsync(cancellationToken))
+                throw new UserInformationException($"Failed to initialize disk: {_devicePath}", "DiskInitializeFailed");
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            _disk = new Linux(_devicePath);
+            if (!await _disk.InitializeAsync(cancellationToken))
+                throw new UserInformationException($"Failed to initialize disk: {_devicePath}", "DiskInitializeFailed");
+        }
         else
         {
-            throw new PlatformNotSupportedException("DiskImage source provider is currently only supported on Windows.");
+            throw new PlatformNotSupportedException(Strings.PlatformNotSupported);
         }
     }
 
@@ -161,6 +187,41 @@ public sealed class SourceProvider : ISourceProviderModule, IDisposable
                 await foreach (var e in EnumerateRecursive(child, cancellationToken))
                     yield return e;
         }
+    }
+
+    /// <summary>
+    /// Lists physical drives available on the system. This is a static method that can be used to discover available disks before initializing the provider.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A list of physical drive information.</returns>
+    /// <exception cref="PlatformNotSupportedException">Thrown when the platform is not supported.</exception>
+    public static IAsyncEnumerable<PhysicalDriveInfo> ListPhysicalDrives(CancellationToken cancellationToken)
+    {
+        if (OperatingSystem.IsWindows())
+            return Windows.ListPhysicalDrivesAsync(cancellationToken);
+        else if (OperatingSystem.IsMacOS())
+            return Mac.ListPhysicalDrivesAsync(cancellationToken);
+        else if (OperatingSystem.IsLinux())
+            return Linux.ListPhysicalDrivesAsync(cancellationToken);
+        else
+            throw new PlatformNotSupportedException(Strings.PlatformNotSupported);
+    }
+
+    /// <summary>
+    /// Gets the platform-specific prefix for disk entries (e.g., "\\.\" on Windows, "/dev/" on Unix). This is used to construct entry paths correctly based on the underlying platform.
+    /// </summary>
+    /// <returns>The platform-specific prefix for disk entries.</returns>
+    /// <exception cref="PlatformNotSupportedException">Thrown when the platform is not supported.</exception>
+    public static string GetDevicePrefix()
+    {
+        if (OperatingSystem.IsWindows())
+            return Windows.Prefix;
+        else if (OperatingSystem.IsMacOS())
+            return Mac.Prefix;
+        else if (OperatingSystem.IsLinux())
+            return Linux.Prefix;
+        else
+            throw new PlatformNotSupportedException(Strings.PlatformNotSupported);
     }
 
     /// <inheritdoc />

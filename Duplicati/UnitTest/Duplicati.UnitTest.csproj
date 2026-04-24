@@ -6,7 +6,7 @@
     <IsPackable>false</IsPackable>
     <IsPublishable>false</IsPublishable>
     <RootNamespace>Duplicati.UnitTest</RootNamespace>
-    <Copyright>Copyright © 2025 Team Duplicati, MIT license</Copyright>
+    <Copyright>Copyright © 2026 Team Duplicati, MIT license</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
@@ -45,6 +45,7 @@
     <ProjectReference Include="..\..\Tools\RemoteSynchronization\RemoteSynchronization.csproj" />
     <ProjectReference Include="..\..\proprietary\DiskImage\Duplicati.Proprietary.DiskImage.csproj" />
     <ProjectReference Include="..\WebserverCore\Duplicati.WebserverCore.csproj" />
+    <ProjectReference Include="..\Library\Certificates\Duplicati.Library.Certificates.csproj" />
   </ItemGroup>
 
   <!-- Copy in WindowsModules for easier debug, or if we are targeting Windows -->
