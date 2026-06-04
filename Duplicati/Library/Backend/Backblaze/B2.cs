@@ -344,8 +344,8 @@ public class B2 : IStreamingBackend, ILockingBackend, IRenameEnabledBackend
             return null;
 
         var normalized = downloadUrl.Trim().TrimEnd('/');
-        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var uri)
-            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        if (!System.Uri.TryCreate(normalized, System.UriKind.Absolute, out var uri)
+            || (uri.Scheme != System.Uri.UriSchemeHttp && uri.Scheme != System.Uri.UriSchemeHttps))
             throw new UserInformationException(Strings.B2.InvalidDownloadUrlError(B2_DOWNLOAD_URL_OPTION, downloadUrl), "B2InvalidDownloadUrl");
 
         return normalized;
@@ -462,11 +462,13 @@ public class B2 : IStreamingBackend, ILockingBackend, IRenameEnabledBackend
         var config = await _b2AuthHelper.GetConfigAsync(cancellationToken).ConfigureAwait(false);
         var downloadUrl = ResolveDownloadUrl(config.DownloadUrl);
 
-        using var request = _filecache != null && _filecache.ContainsKey(remotename)
+        var useFileIdDownload = string.IsNullOrWhiteSpace(_downloadUrl) && _filecache != null && _filecache.ContainsKey(remotename);
+
+        using var request = useFileIdDownload
             ? await _b2AuthHelper.CreateRequestAsync(
                 $"{downloadUrl}/b2api/v1/b2_download_file_by_id?fileId={Utility.Uri.UrlEncode(await GetFileId(remotename, cancellationToken))}", HttpMethod.Get, cancellationToken).ConfigureAwait(false)
             : await _b2AuthHelper.CreateRequestAsync(
-                $"{downloadUrl}/{_urlencodedPrefix}{Utility.Uri.UrlPathEncode(remotename)}", HttpMethod.Get, cancellationToken).ConfigureAwait(false);
+                $"{downloadUrl}/file/{Utility.Uri.UrlPathEncode(_bucketName)}/{_urlencodedPrefix}{Utility.Uri.UrlPathEncode(remotename)}", HttpMethod.Get, cancellationToken).ConfigureAwait(false);
 
         HttpResponseMessage? response = null;
         try
