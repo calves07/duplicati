@@ -19,29 +19,25 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 // DEALINGS IN THE SOFTWARE.
 
-using System.CommandLine;
-using System.CommandLine.NamingConventionBinder;
+namespace Duplicati.WebserverCore.Dto.V2;
 
-namespace Duplicati.CommandLine.ServerUtil.Commands;
-
-public static class Pause
+/// <summary>
+/// DTO for testing filesystem filters
+/// </summary>
+public class TestFilterRequestDto
 {
-    public static Command Create() =>
-        new Command("pause", "Pauses the server")
-        {
-            new Argument<string?>("duration", description: "The duration to pause the server for", getDefaultValue: () => null) {
-                Arity = ArgumentArity.ZeroOrOne
-            }
-        }
-        .WithHandler(CommandHandler.Create<Settings, OutputInterceptor, string?>(async (settings, output, duration) =>
-        {
-            output.AppendConsoleMessage(string.IsNullOrWhiteSpace(duration)
-                ? "Pausing the server indefinitely"
-                : $"Pausing the server for {duration}");
+    /// <summary>
+    /// The paths to evaluate against the filters
+    /// </summary>
+    public string[]? Paths { get; set; }
 
-            await (await settings.GetConnectionAsync(output)).PauseAsync(duration);
+    /// <summary>
+    /// The source paths (roots) which are unconditionally included
+    /// </summary>
+    public string[]? Sources { get; set; }
 
-            // If no exception we presume success
-            output.SetResult(true);
-        }));
+    /// <summary>
+    /// The filter strings to evaluate
+    /// </summary>
+    public string[]? Filters { get; set; }
 }

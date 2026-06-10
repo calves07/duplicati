@@ -84,6 +84,8 @@ Error message: {0}", error); }
         public static string WebserverEnableFolderStatusServiceDescription { get { return LC.L(@"Enable the folder status service for showing overlay icons in the file explorer"); } }
         public static string DisabledbencryptionLong { get { return LC.L(@"Use this option to disable database encryption of sensitive fields"); } }
         public static string DisabledbencryptionShort { get { return LC.L(@"Disable database encryption"); } }
+        public static string DisabledefaultsecretproviderLong { get { return LC.L(@"Use this option to disable the default secret provider"); } }
+        public static string DisabledefaultsecretproviderShort { get { return LC.L(@"Disable the default secret provider"); } }
         public static string LogwindowseventlogLong { get { return LC.L(@"Use this option to log to the Windows event log. The provided name is in the format Log:Source. If no log name is provided, ""Duplicati 2"" is used."); } }
         public static string LogwindowseventlogShort { get { return LC.L(@"Log to the Windows event log"); } }
         public static string LogwindowseventloglevelLong { get { return LC.L(@"Use this option to set the log level for the Windows event log."); } }
@@ -125,6 +127,8 @@ Error message: {0}", error); }
         public static string ConfigureHttpsLong { get { return LC.L(@"Automatically generate and configure HTTPS certificates for the server"); } }
         public static string ConfigureHttpsHostnamesShort { get { return LC.L(@"HTTPS hostnames"); } }
         public static string ConfigureHttpsHostnamesLong { get { return LC.L(@"Comma-separated list of hostnames to include in the HTTPS certificate (used with --configure-https)"); } }
+        public static string SuppressWelcomePageShort { get { return LC.L(@"Suppress the initial welcome page"); } }
+        public static string SuppressWelcomePageLong { get { return LC.L(@"Suppress the welcome page that is shown when first using the web interface"); } }
     }
     internal static class Scheduler
     {

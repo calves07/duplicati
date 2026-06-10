@@ -57,6 +57,8 @@ namespace Duplicati.Server
         private const string WINDOWS_EVENTLOG_LEVEL_OPTION = "windows-eventlog-level";
         /// <summary>The commandline argument name for disabling database encryption.</summary>
         private const string DISABLE_DB_ENCRYPTION_OPTION = "disable-db-encryption";
+        /// <summary>The commandline argument name for disabling the default secret provider.</summary>
+        private const string DISABLE_DEFAULT_SECRET_PROVIDER_OPTION = "disable-default-secret-provider";
         /// <summary>The commandline argument name for requiring database encryption key.</summary>
         private const string REQUIRE_DB_ENCRYPTION_KEY_OPTION = "require-db-encryption-key";
         /// <summary>The commandline argument name for settings encryption key.</summary>
@@ -255,6 +257,9 @@ namespace Duplicati.Server
                     connection.FixInvalidBackupId();
 
                 connection.ApplicationSettings.UpgradePasswordToKBDF();
+
+                if (Library.Utility.Utility.ParseBoolOption(commandlineOptions, WebServerLoader.OPTION_SUPPRESS_WELCOME_PAGE))
+                    connection.ApplicationSettings.SuppressWelcomePage();
 
                 // Handle --configure-https option before starting the webserver
                 if (Library.Utility.Utility.ParseBoolOption(commandlineOptions, WebServerLoader.OPTION_CONFIGURE_HTTPS))
@@ -1155,7 +1160,7 @@ namespace Duplicati.Server
                     disableDbEncryption = true;
             }
 
-            var defaultSecretProvider = SecretProviderHelper.GetDefaultSecretProvider(commandlineOptions, CancellationToken.None).Await();
+            var defaultSecretProvider = SecretProviderHelper.GetDefaultSecretProviderAsync(commandlineOptions, CancellationToken.None).Await();
 
             // If we are supposed to have an encryption key, but do not, try to get it from the (default) secret provider
             if (!hasValidEncryptionKey && defaultSecretProvider != null)
@@ -1567,11 +1572,13 @@ namespace Duplicati.Server
             new CommandLineArgument(WebServerLoader.OPTION_WEBSERVICE_ENABLE_FOLDER_STATUS_SERVICE, CommandLineArgument.ArgumentType.Boolean, Strings.Program.WebserverEnableFolderStatusServiceDescription, Strings.Program.WebserverEnableFolderStatusServiceDescription),
             new CommandLineArgument(WebServerLoader.OPTION_CONFIGURE_HTTPS, CommandLineArgument.ArgumentType.Boolean, Strings.Program.ConfigureHttpsShort, Strings.Program.ConfigureHttpsLong),
             new CommandLineArgument(WebServerLoader.OPTION_CONFIGURE_HTTPS_HOSTNAMES, CommandLineArgument.ArgumentType.String, Strings.Program.ConfigureHttpsHostnamesShort, Strings.Program.ConfigureHttpsHostnamesLong),
+            new CommandLineArgument(WebServerLoader.OPTION_SUPPRESS_WELCOME_PAGE, CommandLineArgument.ArgumentType.Boolean, Strings.Program.SuppressWelcomePageShort, Strings.Program.SuppressWelcomePageLong),
             new CommandLineArgument(PING_PONG_KEEPALIVE_OPTION, CommandLineArgument.ArgumentType.Boolean, Strings.Program.PingpongkeepaliveShort, Strings.Program.PingpongkeepaliveLong),
             new CommandLineArgument(DISABLE_UPDATE_CHECK_OPTION, CommandLineArgument.ArgumentType.Boolean, Strings.Program.DisableupdatecheckShort, Strings.Program.DisableupdatecheckLong),
             new CommandLineArgument(LOG_RETENTION_OPTION, CommandLineArgument.ArgumentType.Timespan, Strings.Program.LogretentionShort, Strings.Program.LogretentionLong, DEFAULT_LOG_RETENTION),
             new CommandLineArgument(DataFolderManager.SERVER_DATAFOLDER_OPTION, CommandLineArgument.ArgumentType.Path, Strings.Program.ServerdatafolderShort, Strings.Program.ServerdatafolderLong(DataFolderManager.DATAFOLDER_ENV_NAME), DataFolderManager.GetDataFolder(DataFolderManager.AccessMode.ProbeOnly)),
             new CommandLineArgument(DISABLE_DB_ENCRYPTION_OPTION, CommandLineArgument.ArgumentType.Boolean, Strings.Program.DisabledbencryptionShort, Strings.Program.DisabledbencryptionLong),
+            new CommandLineArgument(DISABLE_DEFAULT_SECRET_PROVIDER_OPTION, CommandLineArgument.ArgumentType.Boolean, Strings.Program.DisabledefaultsecretproviderShort, Strings.Program.DisabledefaultsecretproviderLong),
             new CommandLineArgument(REQUIRE_DB_ENCRYPTION_KEY_OPTION, CommandLineArgument.ArgumentType.Boolean, Strings.Program.RequiredbencryptionShort, Strings.Program.RequiredbencryptionLong),
             new CommandLineArgument(SETTINGS_ENCRYPTION_KEY_OPTION, CommandLineArgument.ArgumentType.Password, Strings.Program.SettingsencryptionkeyShort, Strings.Program.SettingsencryptionkeyLong(EncryptedFieldHelper.ENVIROMENT_VARIABLE_NAME)),
             new CommandLineArgument(REGISTER_REMOTE_CONTROL_OPTION, CommandLineArgument.ArgumentType.String, Strings.Program.RegisterRemoteControlShort, Strings.Program.RegisterRemoteControlLong),
